@@ -81,7 +81,7 @@ VALUES
 (41, 1, 70), (42, 2, 50), (43, 3, 40), (44, 4, 80), (45, 5, 60),
 (46, 6, 90), (47, 7, 30), (48, 8, 70), (49, 9, 50), (50, 10, 60);
 
-INSERT INTO Customer (name, email, phone) VALUES
+INSERT INTO customer (name, email, phone) VALUES
 ('John Doe', 'john.doe@example.com', '1234567890'),
 ('Jane Smith', 'jane.smith@example.com', '0987654321'),
 ('Tom Hanks', 'tom.hanks@example.com', '1122334455'),
