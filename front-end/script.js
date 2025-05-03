@@ -1,4 +1,4 @@
-const apiURL = 'https://captainfedo1-8080.theiadockernext-0-labs-prod-theiak8s-4-tor01.proxy.cognitiveclass.ai';
+const apiURL = '';
 let students = [];
 let Ordercount = 1;
 let deleteRow = [];
