@@ -1,0 +1,1 @@
+mongoimport --uri="mongodb://root:root@localhost:27017/reviews?authSource=admin" --collection=reviews --file "C:\Users\ishik\eclipse-workspace\courseraSpringBootSalesCrud\reviews.json" --jsonArray

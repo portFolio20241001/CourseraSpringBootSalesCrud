@@ -1,9 +1,10 @@
-package com.project.code.Model;
+package com.project.code.Entity;
 
 
 import java.util.List;
 
 public class PlaceOrderRequestDTO {
+	
     private Long storeId;
     private String customerName;
     private String customerEmail;

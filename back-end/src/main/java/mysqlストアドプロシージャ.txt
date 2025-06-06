@@ -1,0 +1,231 @@
+----------------------------------------------------------------------------------------------------------------------------------
+　　　　　　　　　　　　　　　　　🚀店舗別月間売上
+----------------------------------------------------------------------------------------------------------------------------------
+
+DELIMITER $$
+CREATE PROCEDURE GetMonthlySalesForEachStore(IN year_param INT, IN month_param INT)
+BEGIN
+    SELECT 
+        od.store_id, 
+        SUM(DISTINCT od.total_price) AS total_sales,  -- 重複を避けるためにDISTINCTを使用
+        MONTH(od.date) AS sale_month,
+        YEAR(od.date) AS sale_year
+    FROM 
+        order_details od
+    JOIN 
+        order_item oi ON od.id = oi.order_id
+    WHERE 
+        YEAR(od.date) = year_param
+        AND MONTH(od.date) = month_param
+    GROUP BY 
+        od.store_id, MONTH(od.date), YEAR(od.date)
+    ORDER BY 
+        total_sales DESC;
+END $$
+DELIMITER ;
+ 
+          
+******************使用例******************
+
+CALL GetMonthlySalesForEachStore(2025, 3);
++----------+-------------+------------+-----------+
+| store_id | total_sales | sale_month | sale_year |
++----------+-------------+------------+-----------+
+|        3 |      555.39 |          3 |      2025 |
+|        6 |       552.4 |          3 |      2025 |
+|        9 |      116.64 |          3 |      2025 |
++----------+-------------+------------+-----------+
+3 rows in set (0.01 sec)
+
+Query OK, 0 rows affected (0.02 sec)
+
+
+*****************************************
+
+
+----------------------------------------------------------------------------------------------------------------------------------
+　　　　　　　　　　　　　　　　　🚀会社の合計売上
+----------------------------------------------------------------------------------------------------------------------------------
+DELIMITER $$
+CREATE PROCEDURE GetAggregateSalesForCompany(IN year_param INT, IN month_param INT)
+BEGIN
+    SELECT 
+        SUM(DISTINCT od.total_price) AS total_sales,
+        MONTH(od.date) AS sale_month,
+        YEAR(od.date) AS sale_year
+    FROM 
+        order_details od
+    JOIN 
+        order_item oi ON od.id = oi.order_id
+    WHERE 
+        YEAR(od.date) = year_param
+        AND MONTH(od.date) = month_param
+    GROUP BY 
+        MONTH(od.date), YEAR(od.date);
+END$$
+DELIMITER ;
+ 
+******************使用例******************
+
+mysql> CALL GetAggregateSalesForCompany(2025, 3);
++--------------------+------------+-----------+
+| total_sales        | sale_month | sale_year |
++--------------------+------------+-----------+
+| 1224.4299999999998 |          3 |      2025 |
++--------------------+------------+-----------+
+1 row in set (0.00 sec)
+
+Query OK, 0 rows affected (0.01 sec)
+
+mysql>
+
+
+*****************************************
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------
+　　　　　　　　　　　　　　　　　🚀カテゴリ別のトップ売上商品を特定
+----------------------------------------------------------------------------------------------------------------------------------
+DELIMITER $$
+CREATE PROCEDURE GetTopSellingProductsByCategory(IN target_month INT, IN target_year INT)
+BEGIN
+    SELECT 
+        p.category, 
+        p.name, 
+        SUM(oi.quantity) AS total_quantity_sold,
+        SUM(oi.price * oi.quantity) AS total_sales
+    FROM 
+        product p
+    JOIN 
+        order_item oi ON p.id = oi.product_id
+    JOIN 
+        order_details od ON oi.order_id = od.id
+    WHERE 
+        MONTH(od.date) = target_month  -- 指定された月を使用
+        AND YEAR(od.date) = target_year  -- 指定された年を使用
+    GROUP BY 
+        p.category, p.name
+    HAVING 
+        SUM(oi.quantity) = (
+            SELECT 
+                MAX(total_quantity)
+            FROM (
+                SELECT 
+                    SUM(oi2.quantity) AS total_quantity
+                FROM 
+                    order_item oi2
+                JOIN 
+                    order_details od2 ON oi2.order_id = od2.id
+                JOIN 
+                    product p2 ON oi2.product_id = p2.id
+                WHERE 
+                    MONTH(od2.date) = target_month  -- 同じ月
+                    AND YEAR(od2.date) = target_year  -- 同じ年
+                    AND p2.category = p.category  -- 同じカテゴリ
+                GROUP BY 
+                    p2.name  -- 商品名でグループ化して各商品の合計を計算
+            ) AS Subquery
+        )
+    ORDER BY 
+        p.category;
+END$$
+DELIMITER ;
+ 
+          
+  
+ 
+******************使用例******************
+
+mysql> CALL GetTopSellingProductsByCategory(3,2025);
++-----------------+----------------------+---------------------+--------------------+
+| category        | name                 | total_quantity_sold | total_sales        |
++-----------------+----------------------+---------------------+--------------------+
+| Accessories     | Apple Watch Series 7 |                   3 |              89.97 |
+| Home Appliances | Philips Air Purifier |                   6 | 359.93999999999994 |
+| TV and AV       | LG NanoCell TV       |                   2 |             179.98 |
+| TV and AV       | Sony Bravia 4K TV    |                   2 |             139.98 |
++-----------------+----------------------+---------------------+--------------------+
+4 rows in set (0.01 sec)
+
+Query OK, 0 rows affected (0.04 sec)
+
+
+*****************************************
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------
+　　　　　　　　　　　　　　　　　🚀店舗別のトップ売上商品を特定
+----------------------------------------------------------------------------------------------------------------------------------
+DELIMITER $$
+CREATE PROCEDURE GetTopSellingProductByStore(IN target_month INT, IN target_year INT)
+BEGIN
+    SELECT 
+        p.name AS product_name,
+        od.store_id,
+        SUM(oi.quantity) AS total_quantity_sold,
+        SUM(oi.price * oi.quantity) AS total_sales
+    FROM 
+        product p
+    JOIN 
+        order_item oi ON p.id = oi.product_id
+    JOIN 
+        order_details od ON oi.order_id = od.id
+    WHERE 
+        MONTH(od.date) = target_month  -- 指定された月を使用
+        AND YEAR(od.date) = target_year  -- 指定された年を使用
+    GROUP BY 
+        od.store_id, p.name  -- 店舗と商品名でグループ化
+    HAVING 
+        SUM(oi.quantity) = (
+            SELECT 
+                MAX(total_quantity)
+            FROM (
+                SELECT 
+                    SUM(oi2.quantity) AS total_quantity
+                FROM 
+                    order_item oi2
+                JOIN 
+                    order_details od2 ON oi2.order_id = od2.id
+                JOIN 
+                    product p2 ON oi2.product_id = p2.id
+                WHERE 
+                    MONTH(od2.date) = target_month  -- 同じ月
+                    AND YEAR(od2.date) = target_year  -- 同じ年
+                    AND od2.store_id = od.store_id  -- 同じ店舗
+                GROUP BY 
+                    p2.name  -- 商品名でグループ化
+            ) AS Subquery
+        )
+    ORDER BY 
+        od.store_id;
+END$$
+DELIMITER ;
+
+
+
+******************使用例******************
+
+mysql> CALL GetTopSellingProductByStore(3, 2025);
++----------------------+----------+---------------------+--------------------+
+| product_name         | store_id | total_quantity_sold | total_sales        |
++----------------------+----------+---------------------+--------------------+
+| LG NanoCell TV       |        3 |                   2 |             179.98 |
+| Sony Bravia 4K TV    |        3 |                   2 |             139.98 |
+| Philips Air Purifier |        6 |                   6 | 359.93999999999994 |
+| Apple Watch Series 7 |        9 |                   3 |              89.97 |
++----------------------+----------+---------------------+--------------------+
+4 rows in set (0.00 sec)
+
+Query OK, 0 rows affected (0.03 sec)
+
+mysql>
+
+
+*****************************************
+
+
+
+
+

@@ -1,0 +1,1 @@
+mysql -h localhost -u root -proot < "C:\Users\ishik\eclipse-workspace\courseraSpringBootSalesCrud\insert_data.sql"
